@@ -1,86 +1,34 @@
-import { useState, useRef, useEffect } from "react";
-import { saveSession } from "./storage";
-import TodaySessions from "./TodaySessions";
+// src/App.jsx
+import React, { useState, useCallback } from "react";
+import Timer from "./Timer";
 import TodayChart from "./TodayChart";
-import WeeklyChart from "./WeeklyChart";
+import WeekChart from "./WeeklyChart";
 
 export default function App() {
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef(null);
+  // sessionsVersion increments each time a new session is saved.
+  // Charts consume this to reload data only when needed.
+  const [sessionsVersion, setSessionsVersion] = useState(0);
 
-  const startTimer = () => {
-    if (running) return;
-    setRunning(true);
-
-    intervalRef.current = setInterval(() => {
-      setSeconds(prev => prev + 1);
-    }, 1000);
-  };
-
-  const pauseTimer = () => {
-    setRunning(false);
-    clearInterval(intervalRef.current);
-  };
-
-  const stopTimer = () => {
-    clearInterval(intervalRef.current);
-    setRunning(false);
-
-    if (seconds > 0) {
-      saveSession(seconds);
-    }
-
-    setSeconds(0);
-  };
-
-  // Save running session only when page is being closed or refreshed
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (seconds > 0) {
-        saveSession(seconds);
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      clearInterval(intervalRef.current);
-    };
-  }, []); // Notice empty dependency array — runs only once
-
-  const formatTime = () => {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-    const s = String(seconds % 60).padStart(2, "0");
-    return `${h}:${m}:${s}`;
-  };
+  // called by Timer when a session is saved (or auto-saved on unload)
+  const handleSessionSaved = useCallback(() => {
+    setSessionsVersion((v) => v + 1);
+  }, []);
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+    <div style={{ padding: 20, fontFamily: "sans-serif", maxWidth: 900, margin: "0 auto" }}>
       <h1>Work Time Tracker</h1>
 
-      <div style={{ fontSize: "3rem", margin: "2rem 0" }}>
-        {formatTime()}
-      </div>
+      <Timer onSessionSaved={handleSessionSaved} />
 
-      {!running ? (
-        <button onClick={startTimer} style={{ padding: "1rem", fontSize: "1rem", marginRight: "1rem" }}>
-          Start
-        </button>
-      ) : (
-        <button onClick={pauseTimer} style={{ padding: "1rem", fontSize: "1rem", marginRight: "1rem" }}>
-          Pause
-        </button>
-      )}
+      <hr />
 
-      <button onClick={stopTimer} style={{ padding: "1rem", fontSize: "1rem" }}>
-        Stop (Save Session)
-      </button>
-      <TodaySessions />
-      <TodayChart />
-      <WeeklyChart />
+      <h2>Today's Sessions</h2>
+      <TodayChart version={sessionsVersion} />
+
+      <hr />
+
+      <h2>This Week</h2>
+      <WeekChart version={sessionsVersion} />
     </div>
   );
 }

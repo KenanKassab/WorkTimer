@@ -1,38 +1,43 @@
-import { getSessions } from "./storage";
+// src/TodayChart.jsx
+import React, { useEffect, useState } from "react";
+import { getTodaySessions } from "./storage";
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
 
-export default function TodayChart() {
-  const today = new Date().toISOString().slice(0, 10);
-  const sessions = getSessions()[today] || [];
+function TodayChart({ version }) {
+  const [data, setData] = useState([]);
 
-  // Return null early if no sessions
-  if (sessions.length === 0) return <p>No sessions yet for chart.</p>;
+  useEffect(() => {
+    const sessions = getTodaySessions(); // durations in seconds
+    const formatted = sessions.map((s, i) => ({
+      name: `S${i + 1}`,
+      minutes: Math.round((s.duration || s) / 60), // support both shapes
+    }));
+    setData(formatted);
+  }, [version]);
 
-  const data = sessions.map((s, index) => ({
-    name: `Session ${index + 1}`,
-    duration: Math.round(s.duration / 60) // convert to minutes
-  }));
+  if (!data || data.length === 0) return <p>No sessions today yet.</p>;
 
   return (
-    <div style={{ marginTop: "2rem", width: "100%", height: "300px" }}>
-      <h2>Today's Sessions Chart</h2>
+    <div style={{ marginTop: 12, width: "100%", height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
+        <BarChart data={data}>
           <CartesianGrid stroke="#ccc" />
           <XAxis dataKey="name" />
           <YAxis label={{ value: "Minutes", angle: -90, position: "insideLeft" }} />
           <Tooltip />
-          <Line type="monotone" dataKey="duration" stroke="#8884d8" strokeWidth={2} />
-        </LineChart>
+          <Bar dataKey="minutes" fill="#8884d8" />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
+
+export default React.memo(TodayChart);

@@ -1,32 +1,45 @@
+// src/WeekChart.jsx
+import React, { useEffect, useState } from "react";
 import { getWeeklyTotals } from "./storage";
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
 
-export default function WeeklyChart() {
-  const data = getWeeklyTotals();
+function WeekChart({ version }) {
+  const [data, setData] = useState([]);
 
-  // If no work this week yet
-  if (data.every(d => d.totalMinutes === 0)) return <p>No work done this week yet.</p>;
+  useEffect(() => {
+    const totals = getWeeklyTotals(); // array of { date, totalMinutes }
+    const formatted = totals.map((d) => {
+      // short label (e.g., "Mon 11/23")
+      const dt = new Date(d.date);
+      const label = dt.toLocaleDateString(undefined, { weekday: "short" });
+      return { day: label, minutes: d.totalMinutes };
+    });
+    setData(formatted);
+  }, [version]);
+
+  if (!data || data.length === 0) return <p>No data for this week yet.</p>;
 
   return (
-    <div style={{ marginTop: "2rem", width: "100%", height: "300px" }}>
-      <h2>Weekly Total Work (minutes)</h2>
+    <div style={{ marginTop: 12, width: "100%", height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid stroke="#ccc" />
-          <XAxis dataKey="date" />
+          <XAxis dataKey="day" />
           <YAxis label={{ value: "Minutes", angle: -90, position: "insideLeft" }} />
           <Tooltip />
-          <Bar dataKey="totalMinutes" fill="#82ca9d" />
+          <Bar dataKey="minutes" fill="#82ca9d" />
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
+
+export default React.memo(WeekChart);
